@@ -1,0 +1,2 @@
+CPU型号,CPU核心数,内存容量(GB),内存代次,主板型号,主板序列号,系统硬盘型号,系统硬盘容量(GB),其他硬盘信息,有线IP,有线MAC,无线IP,无线MAC,有线网卡型号,无线网卡型号,显卡信息,备注,计算机名称,操作系统版本,内核版本
+AMD EPYC-Rome-v4 Processor (no XSAVES),12,40,NULL,,,QEMU QEMU HARDDISK SCSI Disk Device,256,QEMU QEMU HARDDISK SCSI Disk Device 500GB,10.0.50.129,BC:24:11:B5:68:47,,,Red Hat VirtIO Ethernet Adapter,,Red Hat VirtIO GPU DOD controller,DevMachine,DESKTOP-KR45CBI,Microsoft Windows 11 企业版 LTSC,10.0.26100
