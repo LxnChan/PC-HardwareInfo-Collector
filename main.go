@@ -86,8 +86,6 @@ type win32OperatingSystem struct {
 }
 
 func main() {
-    showStartWindow()
-
 	cpuModel, cpuCores := getCPUInfo()
 	memGB, memGen := getMemoryInfo()
 	boardModel, boardSN := getBaseBoardInfo()
