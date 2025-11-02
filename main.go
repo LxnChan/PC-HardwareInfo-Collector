@@ -115,10 +115,24 @@ type HardwareInfo struct {
     GPUInfo            string `json:"gpu_info"`
 }
 
+// Config 配置文件结构
+type Config struct {
+    ServerURL string `json:"server_url"`
+}
+
 func main() {
     // 解析命令行参数
     serverURL := flag.String("s", "", "服务器URL（如：https://example.com/api）")
     flag.Parse()
+    
+    // 如果未指定-s参数，尝试从conf.json读取
+    finalServerURL := *serverURL
+    if finalServerURL == "" {
+        if config, err := readConfig(); err == nil && config.ServerURL != "" {
+            finalServerURL = config.ServerURL
+        }
+    }
+    
 	cpuModel, cpuCores := getCPUInfo()
 	memGB, memGen := getMemoryInfo()
 	boardModel, boardSN := getBaseBoardInfo()
@@ -179,10 +193,10 @@ func main() {
 
     writeCSV("hardware_info.csv", header, row)
 
-    // 如果指定了服务器URL，则发送JSON
-    if *serverURL != "" {
-        sendToServer(*serverURL, HardwareInfo{
-            Timestamp:           time.Now().Format("2006-01-02 15:04:05"),
+    // 如果指定了服务器URL（命令行参数或配置文件），则发送JSON
+    if finalServerURL != "" {
+        sendToServer(finalServerURL, HardwareInfo{
+            Timestamp:           fmt.Sprintf("%d", time.Now().UnixMilli()),
             Remark:             remark,
             ComputerName:       compName,
             OSVersion:          osCaption,
@@ -613,6 +627,23 @@ func escapeWMIString(s string) string {
 	s = strings.ReplaceAll(s, "\\", "\\\\")
 	s = strings.ReplaceAll(s, "'", "''")
 	return s
+}
+
+// readConfig 读取同目录下的conf.json配置文件
+func readConfig() (*Config, error) {
+	configPath := filepath.Join(".", "conf.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		// 文件不存在或其他错误，返回空配置
+		return nil, err
+	}
+	
+	var config Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, err
+	}
+	
+	return &config, nil
 }
 
 // sendToServer 将硬件信息以JSON格式POST到指定服务器
