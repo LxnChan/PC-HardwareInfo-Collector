@@ -2,8 +2,13 @@ package main
 
 import (
 	"bufio"
+    "bytes"
 	"encoding/csv"
+    "encoding/json"
+	"flag"
 	"fmt"
+    "io"
+    "net/http"
 	"net"
 	"os"
 	"path/filepath"
@@ -85,7 +90,35 @@ type win32OperatingSystem struct {
     BuildNumber *string
 }
 
+// HardwareInfo 用于JSON序列化的硬件信息结构
+type HardwareInfo struct {
+    Timestamp           string `json:"timestamp"`
+    Remark             string `json:"remark"`
+    ComputerName       string `json:"computer_name"`
+    OSVersion          string `json:"os_version"`
+    KernelVersion      string `json:"kernel_version"`
+    CPUModel           string `json:"cpu_model"`
+    CPUCores           string `json:"cpu_cores"`
+    MemoryGB            string `json:"memory_gb"`
+    MemoryGeneration   string `json:"memory_generation"`
+    BoardModel         string `json:"board_model"`
+    BoardSerial        string `json:"board_serial"`
+    SystemDiskModel    string `json:"system_disk_model"`
+    SystemDiskGB       string `json:"system_disk_gb"`
+    OtherDisks         string `json:"other_disks"`
+    WiredAdapterModel  string `json:"wired_adapter_model"`
+    WiredIP            string `json:"wired_ip"`
+    WiredMAC           string `json:"wired_mac"`
+    WiFiAdapterModel   string `json:"wifi_adapter_model"`
+    WiFiIP             string `json:"wifi_ip"`
+    WiFiMAC            string `json:"wifi_mac"`
+    GPUInfo            string `json:"gpu_info"`
+}
+
 func main() {
+    // 解析命令行参数
+    serverURL := flag.String("s", "", "服务器URL（如：https://example.com/api）")
+    flag.Parse()
 	cpuModel, cpuCores := getCPUInfo()
 	memGB, memGen := getMemoryInfo()
 	boardModel, boardSN := getBaseBoardInfo()
@@ -145,6 +178,33 @@ func main() {
     }
 
     writeCSV("hardware_info.csv", header, row)
+
+    // 如果指定了服务器URL，则发送JSON
+    if *serverURL != "" {
+        sendToServer(*serverURL, HardwareInfo{
+            Timestamp:           time.Now().Format("2006-01-02 15:04:05"),
+            Remark:             remark,
+            ComputerName:       compName,
+            OSVersion:          osCaption,
+            KernelVersion:      kernelVer,
+            CPUModel:           cpuModel,
+            CPUCores:           cpuCores,
+            MemoryGB:            memGB,
+            MemoryGeneration:   memGen,
+            BoardModel:         boardModel,
+            BoardSerial:        boardSN,
+            SystemDiskModel:    sysDiskModel,
+            SystemDiskGB:       sysDiskGB,
+            OtherDisks:         otherDisks,
+            WiredAdapterModel:  wiredModel,
+            WiredIP:            wiredIP,
+            WiredMAC:           wiredMAC,
+            WiFiAdapterModel:   wifiModel,
+            WiFiIP:             wifiIP,
+            WiFiMAC:            wifiMAC,
+            GPUInfo:            gpuInfo,
+        })
+    }
 }
 
 func promptRemark() string {
@@ -553,6 +613,29 @@ func escapeWMIString(s string) string {
 	s = strings.ReplaceAll(s, "\\", "\\\\")
 	s = strings.ReplaceAll(s, "'", "''")
 	return s
+}
+
+// sendToServer 将硬件信息以JSON格式POST到指定服务器
+func sendToServer(url string, info HardwareInfo) {
+	jsonData, err := json.Marshal(info)
+	if err != nil {
+		fmt.Printf("JSON序列化失败: %v\n", err)
+		return
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("发送到服务器失败: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		fmt.Printf("已成功发送到服务器: %s\n", url)
+	} else {
+		fmt.Printf("服务器返回错误 (状态码: %d): %s\n", resp.StatusCode, string(body))
+	}
 }
 
 // ensure program link time imports are used (avoid unused import on older toolchains)
